@@ -55,7 +55,7 @@ class DBManager():
 
         self.lock.release()
 
-    def add_mcserver(self, mcserver_obj):
+    def add_mcserver_nocommit(self, mcserver_obj):
         self.lock.acquire(blocking=True)
 
         old_mcserver = self.session.query(McServer).filter_by(address=mcserver_obj.address[0]).first()
@@ -68,11 +68,22 @@ class DBManager():
             new_mcserver = McServer(address=mcserver_obj.address[0], ping=mcserver_obj.ping, version=mcserver_obj.version, players=mcserver_obj.players)
             self.session.add(new_mcserver)
 
+        self.lock.release()
+
+    def update_players_nocommit(self, mcserver_obj):
+        self.lock.acquire()
+
+        mcserver = self.session.query(McServer).filter_by(address=mcserver_obj.address[0]).first()
+        mcserver.players = mcserver_obj.players
+
+        self.lock.release()
+
+    def commit(self):
+        self.lock.acquire()
         try:
             self.session.commit()
         except:
             self.session.rollback()
-
         self.lock.release()
 
     def get_mcservers(self):
@@ -80,5 +91,8 @@ class DBManager():
         ret_list = [McServerObj((item.address, "25565"), item.ping, item.version, item.players) for item in self.session.query(McServer).all()]
         self.lock.release()
         return ret_list
+
+    def get_number_of_mcservers(self):
+        return self.session.query(McServer).count()
 
 instance = DBManager()
