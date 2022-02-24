@@ -1,31 +1,35 @@
-import sqlalchemy
-from sqlalchemy.orm import scoped_session, sessionmaker
+"""Module for managing the database"""
+
 from threading import Lock
 
-from database.model import Base, Address, McServer
+import sqlalchemy
+from sqlalchemy.orm import scoped_session, sessionmaker
+
+from database.model import Address, Base, McServer, Player
 
 try:
     from discordbot.mcserver import McServer as McServerObj
 except:
     pass
 
-instance = None
+INSTANCE = None
 
 class DBManager():
+    """Class that manages the database"""
+
     def __init__(self):
-        global instance
-        if instance == None:
+        if INSTANCE is None:
             db_connection = sqlalchemy.create_engine("sqlite:///database/addresses.db", connect_args={'check_same_thread': False})
             Base.metadata.create_all(db_connection)
 
-            session_factory = sessionmaker(db_connection)
+            session_factory = sessionmaker(db_connection, autoflush=False)
             self._Session = scoped_session(session_factory)
             self.session = self._Session()
 
             self.lock = Lock()
 
-    def __delete__(self):
-        self._Session.remove()
+    # def __del__(self):
+        # self._Session.remove()
 
     def add_address(self, address):
         new_address = Address(address=address)
@@ -63,18 +67,29 @@ class DBManager():
             old_mcserver.address = mcserver_obj.address[0]
             old_mcserver.ping = mcserver_obj.ping
             old_mcserver.version = mcserver_obj.version
-            old_mcserver.players = mcserver_obj.players
+            old_mcserver.online_players = mcserver_obj.online_players
+            for player in mcserver_obj.players:
+                old_player = self.session.query(Player).filter_by(playername=player).first()
+                if old_player != None:
+                    old_player.mcserver_id = old_mcserver.mcserver_id
+                else:
+                    temp_player = Player(playername=player, mcserver_id=old_mcserver.mcserver_id)
+                    self.session.add(temp_player)
         else:
-            new_mcserver = McServer(address=mcserver_obj.address[0], ping=mcserver_obj.ping, version=mcserver_obj.version, players=mcserver_obj.players)
+            new_mcserver = McServer(address=mcserver_obj.address[0], ping=mcserver_obj.ping, version=mcserver_obj.version, online_players=mcserver_obj.online_players)
             self.session.add(new_mcserver)
+            for player in mcserver_obj.players:
+                temp_player = Player(playername=player, mcserver_id=new_mcserver.mcserver_id)
+                self.session.add(temp_player)
 
         self.lock.release()
+        self.commit()
 
     def update_players_nocommit(self, mcserver_obj):
-        self.lock.acquire()
+        self.lock.acquire(blocking=True)
 
         mcserver = self.session.query(McServer).filter_by(address=mcserver_obj.address[0]).first()
-        mcserver.players = mcserver_obj.players
+        mcserver.online_players = mcserver_obj.online_players
 
         self.lock.release()
 
@@ -88,11 +103,11 @@ class DBManager():
 
     def get_mcservers(self):
         self.lock.acquire(blocking=True)
-        ret_list = [McServerObj((item.address, "25565"), item.ping, item.version, item.players) for item in self.session.query(McServer).all()]
+        ret_list = [McServerObj((item.address, "25565"), item.ping, item.version, item.online_players, []) for item in self.session.query(McServer).all()]
         self.lock.release()
         return ret_list
 
     def get_number_of_mcservers(self):
         return self.session.query(McServer).count()
 
-instance = DBManager()
+INSTANCE = DBManager()
