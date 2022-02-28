@@ -1,8 +1,12 @@
+"""Declaring data models"""
+
 import sqlalchemy
 import sqlalchemy.ext.declarative
 from sqlalchemy.orm import relationship
 
 Base = sqlalchemy.ext.declarative.declarative_base()
+
+# pylint: disable=R0903
 
 class Address(Base):
     """Address representation."""
@@ -28,4 +32,6 @@ class Player(Base):
     __tablename__ = "player"
     player_id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True)
     playername = sqlalchemy.Column(sqlalchemy.String)
-    mcserver_id = sqlalchemy.Column(sqlalchemy.Integer, sqlalchemy.ForeignKey("mcserver.mcserver_id"), nullable=False)
+    mcserver_id = sqlalchemy.Column(sqlalchemy.Integer,
+                                    sqlalchemy.ForeignKey("mcserver.mcserver_id"),
+                                    nullable=False)
