@@ -1,2 +1,3 @@
-drop table mcserver;
-drop table player
+drop table if exists mcserver;
+
+drop table if exists player;
