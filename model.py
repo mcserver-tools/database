@@ -31,7 +31,6 @@ class Player(Base):
 
     __tablename__ = "player"
     player_id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True)
-    playername = sqlalchemy.Column(sqlalchemy.String)
     mcserver_id = sqlalchemy.Column(sqlalchemy.Integer,
-                                    sqlalchemy.ForeignKey("mcserver.mcserver_id"),
-                                    nullable=False)
+                                    sqlalchemy.ForeignKey("mcserver.mcserver_id"))
+    name = sqlalchemy.Column(sqlalchemy.String)

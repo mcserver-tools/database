@@ -68,39 +68,17 @@ class DBManager():
         """Add a McServer object to the database"""
 
         with self.lock:
-            old_mcserver = self.session.query(McServer).filter_by(address=mcserver_obj.address[0]) \
-                                                       .first()
-            if old_mcserver is not None:
-                old_mcserver.address = mcserver_obj.address[0]
-                old_mcserver.ping = mcserver_obj.ping
-                old_mcserver.version = mcserver_obj.version
-                old_mcserver.online_players = mcserver_obj.online_players
-                for player in mcserver_obj.players:
-                    old_player = self.session.query(Player).filter_by(playername=player).first()
-                    if old_player is not None:
-                        old_player.mcserver_id = old_mcserver.mcserver_id
-                    else:
-                        temp_player = Player(playername=player,
-                                             mcserver_id=old_mcserver.mcserver_id)
-                        self.session.add(temp_player)
-            else:
-                new_mcserver = McServer(address=mcserver_obj.address[0], ping=mcserver_obj.ping,
-                                        version=mcserver_obj.version,
-                                        online_players=mcserver_obj.online_players)
-                self.session.add(new_mcserver)
-                for player in mcserver_obj.players:
-                    temp_player = Player(playername=player, mcserver_id=new_mcserver.mcserver_id)
-                    self.session.add(temp_player)
+            players = []
+            for playername in mcserver_obj.players:
+                temp_player = Player(name=playername)
+                self.session.add(temp_player)
+                players.append(temp_player)
 
-            self.commit()
-
-    def update_players_nocommit(self, mcserver_obj):
-        """Updates the online_players column of one database entry"""
-
-        with self.lock:
-            mcserver = self.session.query(McServer).filter_by(address=mcserver_obj.address[0]) \
-                                                   .first()
-            mcserver.online_players = mcserver_obj.online_players
+            new_mcserver = McServer(address=mcserver_obj.address[0], ping=mcserver_obj.ping,
+                                    version=mcserver_obj.version,
+                                    online_players=mcserver_obj.online_players,
+                                    players=players)
+            self.session.add(new_mcserver)
 
     def commit(self):
         """Commits changes to database"""
@@ -116,7 +94,7 @@ class DBManager():
 
         with self.lock:
             ret_list = [McServerObj((item.address, "25565"), item.ping, item.version,
-                                    item.online_players, [])
+                                    item.online_players, item.players)
                         for item in self.session.query(McServer).all()]
         return ret_list
 
