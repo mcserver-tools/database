@@ -95,7 +95,7 @@ class DBManager():
 
         with self.lock:
             ret_list = [McServerObj((item.address, "25565"), item.ping, item.version,
-                                    item.online_players, item.players)
+                                    item.online_players, [player.name for player in item.players])
                         for item in self.session.query(McServer).all()]
         return ret_list
 
