@@ -59,6 +59,7 @@ class DBManager():
 
         with self.lock:
             self.session.query(McServer).delete()
+            self.session.query(Player).delete()
             try:
                 self.session.commit()
             except sqlalchemy.exc.IntegrityError:
